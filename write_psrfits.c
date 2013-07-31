@@ -56,6 +56,7 @@ int psrfits_create(struct psrfits *pf) {
         pf->tot_rows = 0;
         pf->N = 0L;
         pf->T = 0.0;
+        pf->singleton = 0;
         hdr->offset_subint = 0;
         pf->mode = 'w';
 

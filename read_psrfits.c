@@ -16,20 +16,49 @@ int psrfits_open(struct psrfits *pf) {
     int itmp;
     double dtmp;
     char ctmp[256];
+    char *ext;
+    char fits_ext[] = ".fits";
 
     struct hdrinfo *hdr = &(pf->hdr);
     struct subint  *sub = &(pf->sub);
     struct foldinfo *fold = &(pf->fold);
     int *status = &(pf->status);
 
-    sprintf(ctmp, "%s_%04d.fits", pf->basefilename, pf->filenum-1);
-    if (pf->filename[0]=='\0' || 
-        ((pf->filenum > 1) && (strcmp(ctmp, pf->filename)==0)))
-        // The 2nd test checks to see if we are creating filenames ourselves
-        sprintf(pf->filename, "%s_%04d.fits", pf->basefilename, pf->filenum);
+    if (pf->filename[0]=='\0') {
+        // Try opening pf->basefilename for reading.
+        // If successful assume we're working with a single file 
+        // (i.e. not a sequence).
+        fits_open_file(&(pf->fptr), pf->basefilename, READONLY, status);
+        if (! *status) {
+            strcpy(pf->filename, pf->basefilename);
+            pf->singleton = 1;
+            pf->mode = 'r';
+            // If extension is .fits, update basefilename such that
+            // it doesn't include the extension.
+            ext = strrchr(pf->basefilename, '.');
+            printf("ends with '%s'\n", ext);
+            if (memcmp(ext, fits_ext, sizeof(fits_ext)) == 0) {
+                ext[0] = '\0';
+            }
+        } else {
+            pf->singleton = 0;
+        }
+    } else if (pf->singleton) { 
+        // File has already been opened, but we're working with a singleton
+        // So there are no more files to iterate over. Send no-file-found
+        // status.
+        *status=104;
+    }
+    if (! pf->singleton) {
+        sprintf(ctmp, "%s_%04d.fits", pf->basefilename, pf->filenum-1);
+        if (pf->filename[0]=='\0' || 
+            ((pf->filenum > 1) && (strcmp(ctmp, pf->filename)==0)))
+            // The 2nd test checks to see if we are creating filenames ourselves
+            sprintf(pf->filename, "%s_%04d.fits", pf->basefilename, pf->filenum);
 
-    fits_open_file(&(pf->fptr), pf->filename, READONLY, status);
-    pf->mode = 'r';
+        fits_open_file(&(pf->fptr), pf->filename, READONLY, status);
+        pf->mode = 'r';
+    }
 
     // If file no exist, exit now
     if (*status) {
@@ -37,7 +66,6 @@ int psrfits_open(struct psrfits *pf) {
     } else {
         printf("Opened file '%s'\n", pf->filename);
     }
-
     // Move to main HDU
     fits_movabs_hdu(pf->fptr, 1, NULL, status);
 

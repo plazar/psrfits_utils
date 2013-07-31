@@ -113,6 +113,7 @@ struct psrfits {
     int multifile;          // Write multiple output files
     int quiet;              // Be quiet about writing each subint
     char mode;              // Read (r) or write (w).
+    char singleton;         // Is a single file (1), or part of a sequence (0).
     struct hdrinfo hdr;
     struct subint sub;
     struct foldinfo fold;   
